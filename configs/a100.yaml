@@ -1,0 +1,78 @@
+# A100 GPU optimized configuration
+# Designed for NVIDIA A100 (40GB or 80GB VRAM)
+# Balances model size, batch size, and training speed
+
+environment:
+  max_steps: 1500
+  starting_deck_size: 52
+
+model:
+  d_model: 384  # Larger than Colab, smaller than H100
+  num_heads: 12
+  num_layers: 8  # Deep enough for complex strategies
+  dropout: 0.1
+
+training:
+  total_timesteps: 50_000_000  # 50M timesteps (~12-16 hours on A100)
+  learning_rate: 0.00015
+  batch_size: 768  # A100 can handle large batches efficiently
+  n_epochs: 10
+  n_steps: 2048  # Good balance for rollout collection
+  
+  gamma: 0.995
+  gae_lambda: 0.95
+  clip_range: 0.2
+  clip_range_vf: 0.2
+  ent_coef: 0.012
+  vf_coef: 0.5
+  max_grad_norm: 0.8
+  
+  normalize_advantage: true
+  target_kl: 0.012
+  device: "cuda"
+  
+  # A100-specific optimizations
+  use_mixed_precision: true  # A100 has excellent FP16/BF16 support
+  compile_model: true  # PyTorch 2.0+ compilation for speedup
+
+logging:
+  log_dir: "logs/a100_training"
+  log_interval: 10
+  save_interval: 100
+  use_tensorboard: true
+  use_wandb: true
+  wandb_project: "balatroNN"
+  wandb_tags: ["a100", "advanced"]
+
+checkpoints:
+  dir: "checkpoints/a100"
+  save_best: true
+  keep_last_n: 8
+  save_optimizer: true  # Save optimizer state for resuming
+
+evaluation:
+  eval_freq: 500
+  n_eval_episodes: 15
+  deterministic: true
+  
+  # Advanced evaluation
+  save_eval_videos: false
+  eval_on_curriculum: true
+
+curriculum:
+  enabled: true
+  start_ante: 1
+  max_ante: 8
+  ante_increase_threshold: 0.75
+  
+  # Progressive difficulty
+  adapt_learning_rate: true
+  lr_decay_factor: 0.95
+
+# Performance optimizations
+optimization:
+  gradient_checkpointing: false  # A100 has enough memory
+  pin_memory: true
+  num_workers: 4
+  prefetch_factor: 2
+

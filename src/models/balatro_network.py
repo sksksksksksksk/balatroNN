@@ -451,32 +451,32 @@ class PolicyValueNetwork(nn.Module):
         card_selection_dist = torch.distributions.Bernoulli(logits=action_logits["card_selection"])
         
         # Shop selection distribution
-        shop_selection_dist = torch.distributions.Categorical(logits=action_logits["shop_selection"])
+        shop_selection_dist = torch.distributions.Categorical(logits=action_logits["shop_item_index"])
         
         if action is None:
             # Sample new action
             if deterministic:
                 action_type = action_logits["action_type"].argmax(dim=-1)
                 card_selection = (action_logits["card_selection"] > 0).float()
-                shop_selection = action_logits["shop_selection"].argmax(dim=-1)
+                shop_item_index = action_logits["shop_item_index"].argmax(dim=-1)
             else:
                 action_type = action_type_dist.sample()
                 card_selection = card_selection_dist.sample()
-                shop_selection = shop_selection_dist.sample()
+                shop_item_index = shop_selection_dist.sample()
             
             action = {
                 "action_type": action_type,
                 "card_selection": card_selection,
-                "shop_selection": shop_selection
+                "shop_item_index": shop_item_index
             }
         
         # Compute log probabilities
         action_type_log_prob = action_type_dist.log_prob(action["action_type"])
         card_selection_log_prob = card_selection_dist.log_prob(action["card_selection"]).sum(dim=-1)
-        shop_selection_log_prob = shop_selection_dist.log_prob(action["shop_selection"])
+        shop_item_index_log_prob = shop_selection_dist.log_prob(action["shop_item_index"])
         
         # Total log probability
-        log_prob = action_type_log_prob + card_selection_log_prob + shop_selection_log_prob
+        log_prob = action_type_log_prob + card_selection_log_prob + shop_item_index_log_prob
         
         # Compute entropy
         entropy = action_type_dist.entropy() + card_selection_dist.entropy().sum(dim=-1) + shop_selection_dist.entropy()
