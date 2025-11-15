@@ -1,6 +1,12 @@
 # BalatroNN - Neural Network Training for Balatro
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sksksksksksksk/balatroNN/blob/main/colab_setup.ipynb)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
 A reinforcement learning system to train neural networks to play Balatro, the poker-based roguelike deck-building game.
+
+**🚀 Train for FREE in Google Colab!** Click the badge above to get started in 5 minutes.
 
 ## Overview
 
