@@ -56,7 +56,7 @@ class RealBalatroEnv(gym.Env):
         self.action_space = gym.spaces.Dict({
             "action_type": gym.spaces.Discrete(5),
             "card_selection": gym.spaces.MultiBinary(8),
-            "shop_selection": gym.spaces.Discrete(7),
+            "shop_item_index": gym.spaces.Discrete(7),
         })
         
         self.last_state = None
@@ -189,11 +189,11 @@ class RealBalatroEnv(gym.Env):
                 return self.input_controller.discard_action(selected_indices)
             
             elif action_type == 2:  # Shop buy
-                shop_selection = action["shop_selection"]
-                if isinstance(shop_selection, np.ndarray):
-                    shop_selection = int(shop_selection.item())
+                shop_item_index = action["shop_item_index"]
+                if isinstance(shop_item_index, np.ndarray):
+                    shop_item_index = int(shop_item_index.item())
                 
-                return self.input_controller.click_shop_item(shop_selection)
+                return self.input_controller.click_shop_item(shop_item_index)
             
             elif action_type == 3:  # Skip
                 return self.input_controller.press_skip()

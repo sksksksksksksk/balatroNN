@@ -68,7 +68,7 @@ class PPOBuffer:
         self.actions = {
             "action_type": [],
             "card_selection": [],
-            "shop_selection": []
+            "shop_item_index": []
         }
         self.rewards = []
         self.values = []
@@ -157,7 +157,7 @@ class PPOBuffer:
         actions_batch = {
             "action_type": torch.as_tensor(np.array(self.actions["action_type"]), dtype=torch.long, device=self.config.device),
             "card_selection": torch.as_tensor(np.array(self.actions["card_selection"]), dtype=torch.float32, device=self.config.device),
-            "shop_selection": torch.as_tensor(np.array(self.actions["shop_selection"]), dtype=torch.long, device=self.config.device)
+            "shop_item_index": torch.as_tensor(np.array(self.actions["shop_item_index"]), dtype=torch.long, device=self.config.device)
         }
         
         log_probs_batch = torch.as_tensor(self.log_probs, dtype=torch.float32, device=self.config.device)
@@ -236,7 +236,7 @@ class PPOTrainer:
             action_np = {
                 "action_type": action["action_type"].cpu().numpy()[0],
                 "card_selection": action["card_selection"].cpu().numpy()[0],
-                "shop_selection": action["shop_selection"].cpu().numpy()[0]
+                "shop_item_index": action["shop_item_index"].cpu().numpy()[0]
             }
             
             # Step environment
