@@ -443,19 +443,7 @@ drive.mount('/content/drive')
 !cp -r checkpoints/ /content/drive/MyDrive/balatronn_checkpoints/
 ```
 
-### 3. Use Wandb for Long Training
-
-```python
-!pip install wandb
-!wandb login
-
-# Enable in config
-# logging:
-#   use_wandb: true
-#   wandb_project: "balatroNN"
-```
-
-### 4. Parallel Training
+### 3. Parallel Training
 
 Run multiple experiments:
 ```python

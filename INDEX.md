@@ -112,7 +112,7 @@ python train.py --config configs/quick_test.yaml
 python train.py --config configs/default.yaml
 
 # H100 optimized (12-15 hours)
-python train.py --config configs/h100_large.yaml --wandb
+python train.py --config configs/h100_large.yaml
 ```
 
 ### Monitoring

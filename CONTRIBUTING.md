@@ -20,7 +20,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 #### Getting Started
 ```bash
 # Fork and clone the repository
-git clone https://github.com/yourusername/balatroNN.git
+git clone https://github.com/sksksksksksksk/balatroNN.git
 cd balatroNN
 
 # Create a branch for your feature

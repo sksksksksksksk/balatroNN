@@ -28,7 +28,7 @@ The A100 configuration is optimized for serious training runs with:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/balatroNN.git
+git clone https://github.com/sksksksksksksk/balatroNN.git
 cd balatroNN
 
 # Install dependencies
@@ -122,18 +122,6 @@ tensorboard --logdir logs/a100_training
 
 Access at: http://localhost:6006
 
-### Weights & Biases (Optional)
-
-Set `use_wandb: true` in config and run:
-
-```bash
-# Login to W&B
-wandb login
-
-# Training will automatically log to W&B
-python train.py --config configs/a100.yaml
-```
-
 ### GPU Monitoring
 
 ```bash
@@ -217,18 +205,6 @@ For multiple A100s:
 ```bash
 # Using PyTorch DDP
 torchrun --nproc_per_node=4 train.py --config configs/a100.yaml --distributed
-```
-
-### Custom Hyperparameter Sweeps
-
-Use W&B Sweeps for hyperparameter optimization:
-
-```bash
-# Create sweep
-wandb sweep sweep_config.yaml
-
-# Run sweep agent
-wandb agent sweep_id
 ```
 
 ## Troubleshooting
@@ -351,7 +327,7 @@ python evaluate.py --checkpoint checkpoints/a100/*/final_model.pt
 ## Support
 
 For issues or questions:
-1. Check [GitHub Issues](https://github.com/yourusername/balatroNN/issues)
+1. Check [GitHub Issues](https://github.com/sksksksksksksk/balatroNN/issues)
 2. Review [Training Logs](logs/)
 3. Join our [Discord](https://discord.gg/example)
 

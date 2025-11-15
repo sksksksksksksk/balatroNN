@@ -15,27 +15,16 @@ class Logger:
     Training logger that supports multiple backends
     """
     
-    def __init__(self, log_dir: str, use_tensorboard: bool = True, use_wandb: bool = False):
+    def __init__(self, log_dir: str, use_tensorboard: bool = True):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         
         self.use_tensorboard = use_tensorboard
-        self.use_wandb = use_wandb
         
         # Initialize tensorboard
         self.tb_writer = None
         if use_tensorboard:
             self.tb_writer = SummaryWriter(log_dir=str(self.log_dir / "tensorboard"))
-        
-        # Initialize wandb
-        self.wandb = None
-        if use_wandb:
-            try:
-                import wandb
-                self.wandb = wandb
-            except ImportError:
-                print("Warning: wandb not installed. Skipping wandb logging.")
-                self.use_wandb = False
         
         # JSON log file
         self.json_log_path = self.log_dir / "metrics.jsonl"
@@ -44,9 +33,6 @@ class Logger:
         """Log a scalar value"""
         if self.tb_writer:
             self.tb_writer.add_scalar(tag, value, step)
-        
-        if self.wandb and self.use_wandb:
-            self.wandb.log({tag: value, "step": step})
     
     def log_scalars(self, metrics: Dict[str, float], step: int):
         """Log multiple scalar values"""
@@ -72,9 +58,6 @@ class Logger:
         """Close all loggers"""
         if self.tb_writer:
             self.tb_writer.close()
-        
-        if self.wandb and self.use_wandb:
-            self.wandb.finish()
 
 
 def setup_tensorboard(log_dir: str) -> SummaryWriter:

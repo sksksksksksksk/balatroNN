@@ -56,12 +56,6 @@ def parse_args():
     )
     
     parser.add_argument(
-        "--wandb",
-        action="store_true",
-        help="Enable Weights & Biases logging"
-    )
-    
-    parser.add_argument(
         "--eval-only",
         action="store_true",
         help="Only run evaluation, no training"
@@ -88,9 +82,6 @@ def main():
     # Override config with command line arguments
     if args.device:
         config["training"]["device"] = args.device
-    
-    if args.wandb:
-        config["logging"]["use_wandb"] = True
     
     # Set random seed
     set_seed(args.seed)
@@ -162,28 +153,13 @@ def main():
     
     logger = Logger(
         log_dir=log_dir,
-        use_tensorboard=config["logging"]["use_tensorboard"],
-        use_wandb=config["logging"]["use_wandb"]
+        use_tensorboard=config["logging"]["use_tensorboard"]
     )
     
     # Save configuration
     config_save_path = os.path.join(log_dir, "config.yaml")
     save_config(config, config_save_path)
     print(f"\nSaved configuration to {config_save_path}")
-    
-    # Initialize wandb if enabled
-    if config["logging"]["use_wandb"]:
-        try:
-            import wandb
-            wandb.init(
-                project=config["logging"]["wandb_project"],
-                entity=config["logging"].get("wandb_entity"),
-                config=config,
-                name=f"balatroNN_{args.seed}"
-            )
-            print("Weights & Biases initialized")
-        except Exception as e:
-            print(f"Warning: Could not initialize wandb: {e}")
     
     # Evaluation only mode
     if args.eval_only:

@@ -134,7 +134,7 @@ Settings:
 ### For H100 (Recommended)
 
 ```bash
-python train.py --config configs/h100_large.yaml --wandb
+python train.py --config configs/h100_large.yaml
 ```
 
 Settings:
@@ -142,16 +142,6 @@ Settings:
 - Training time: ~12-15 hours for 100M steps
 - Memory usage: ~20GB VRAM
 - Expected performance: Reach ante 6-7, ~30% win rate
-
-### Enable Weights & Biases Logging
-
-```bash
-# First time only
-wandb login
-
-# Then train with wandb
-python train.py --config configs/h100_large.yaml --wandb
-```
 
 ## 📊 Understanding the Output
 

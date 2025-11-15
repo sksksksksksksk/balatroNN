@@ -95,9 +95,6 @@ python train.py --config configs/default.yaml --resume checkpoints/latest.pt
 ```bash
 # TensorBoard
 tensorboard --logdir logs/
-
-# Weights & Biases (if configured)
-wandb login
 ```
 
 ## Architecture

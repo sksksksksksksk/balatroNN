@@ -90,16 +90,6 @@ tensorboard --logdir logs/
 
 Then open http://localhost:6006 in your browser.
 
-### Weights & Biases
-
-```bash
-# Login to wandb
-wandb login
-
-# Train with wandb logging
-python train.py --config configs/default.yaml --wandb
-```
-
 ### Visualize Progress
 
 ```bash

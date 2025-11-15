@@ -107,14 +107,6 @@ watch -n 2 nvidia-smi
 tail -f logs/a100_training/*/events*
 ```
 
-### Option 3: Weights & Biases
-Edit `configs/a100.yaml`:
-```yaml
-logging:
-  use_wandb: true
-```
-Then monitor at wandb.ai
-
 ---
 
 ## Stopping Training

@@ -115,16 +115,7 @@ Run Cell 6 while training runs to see live graphs:
 - Reward progression
 - Training metrics
 
-### Option 2: Weights & Biases
-Edit `configs/a100.yaml`:
-```yaml
-logging:
-  use_wandb: true
-```
-
-Then monitor remotely at [wandb.ai](https://wandb.ai)
-
-### Option 3: Check Logs
+### Option 2: Check Logs
 ```python
 !tail -f logs/a100_training/*/events*
 ```
