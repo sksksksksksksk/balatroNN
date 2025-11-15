@@ -186,7 +186,7 @@ def main():
         model, env, args.episodes, 
         deterministic=args.deterministic,
         render=args.render,
-        device=args.device
+        device=device
     )
     
     # Print results

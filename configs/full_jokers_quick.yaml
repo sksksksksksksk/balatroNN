@@ -1,0 +1,49 @@
+# Quick Test Configuration for 150 Jokers
+# For rapid iteration and testing
+# Hardware: Any GPU with 8GB+ VRAM
+
+environment:
+  max_steps: 1000
+  starting_deck_size: 52
+
+model:
+  d_model: 256  # Smaller model for quick testing
+  num_heads: 8
+  num_layers: 4
+  dropout: 0.1
+
+training:
+  # Quick test: 1M timesteps
+  total_timesteps: 1_000_000
+  learning_rate: 0.0003
+  batch_size: 256
+  n_epochs: 8
+  n_steps: 1024
+  
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.02
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  
+  normalize_advantage: true
+  target_kl: 0.015
+  device: "auto"
+  
+  # Simplified curriculum for quick testing
+  use_curriculum: true
+  curriculum_phases: 3  # Only first 3 phases
+
+logging:
+  log_dir: "logs/full_jokers_quick"
+  log_interval: 5
+  save_interval: 50
+  use_tensorboard: true
+  use_wandb: false
+
+checkpoints:
+  dir: "checkpoints/full_jokers_quick"
+  save_best: true
+  keep_last_n: 2
+

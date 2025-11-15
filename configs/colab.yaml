@@ -41,3 +41,14 @@ checkpoints:
   save_best: true
   keep_last_n: 3  # Save disk space
 
+evaluation:
+  eval_freq: 500
+  n_eval_episodes: 10
+  deterministic: true
+
+curriculum:
+  enabled: false
+  start_ante: 1
+  max_ante: 8
+  ante_increase_threshold: 0.7
+

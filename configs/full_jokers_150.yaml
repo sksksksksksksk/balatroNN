@@ -1,0 +1,57 @@
+# Full 150 Joker Training Configuration
+# Designed for large-scale training with curriculum learning
+# Hardware: H100 or A100 recommended
+# Expected time: 200-500 hours
+
+environment:
+  max_steps: 3000  # Longer episodes for complex gameplay
+  starting_deck_size: 52
+
+model:
+  d_model: 384  # Larger model for 150 jokers
+  num_heads: 12
+  num_layers: 8  # Deep architecture
+  dropout: 0.1
+
+training:
+  # Total training: 50M timesteps (10x baseline)
+  total_timesteps: 50_000_000
+  learning_rate: 0.0002  # Lower for stability
+  batch_size: 512  # Large batches
+  n_epochs: 10
+  n_steps: 2048  # Long rollouts
+  
+  # PPO hyperparameters
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.025  # Higher exploration
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  
+  normalize_advantage: true
+  target_kl: 0.015
+  device: "auto"
+  
+  # Curriculum learning
+  use_curriculum: true
+  curriculum_phases: 7
+  
+logging:
+  log_dir: "logs/full_jokers_150"
+  log_interval: 10
+  save_interval: 100  # Save every 100 updates (~1-2 hours)
+  use_tensorboard: true
+  use_wandb: false  # Set to true if using Weights & Biases
+
+checkpoints:
+  dir: "checkpoints/full_jokers_150"
+  save_best: true
+  keep_last_n: 5  # Keep 5 checkpoints
+
+# Performance optimizations
+optimization:
+  mixed_precision: true  # FP16 training
+  gradient_checkpointing: false  # Enable if OOM
+  num_workers: 4  # Parallel env workers
+

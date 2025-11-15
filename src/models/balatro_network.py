@@ -209,12 +209,23 @@ class BalatroNetwork(nn.Module):
         
         self.d_model = d_model
         
-        # Encoders
+        # Encoders (EXPANDED for full game)
         self.card_encoder = CardEncoder(card_dim=32, d_model=d_model, num_heads=num_heads, 
                                        num_layers=num_layers, dropout=dropout)
-        self.joker_encoder = JokerEncoder(joker_dim=64, d_model=d_model, dropout=dropout)
-        self.state_encoder = StateEncoder(scalar_dim=32, blind_dim=16, d_model=d_model, 
+        self.joker_encoder = JokerEncoder(joker_dim=128, d_model=d_model, dropout=dropout)  # Expanded to 128
+        self.consumable_encoder = JokerEncoder(joker_dim=64, d_model=d_model, dropout=dropout)  # Reuse joker encoder
+        self.shop_encoder = JokerEncoder(joker_dim=128, d_model=d_model, dropout=dropout)  # For shop items
+        self.voucher_encoder = JokerEncoder(joker_dim=32, d_model=d_model, dropout=dropout)  # For vouchers
+        self.state_encoder = StateEncoder(scalar_dim=64, blind_dim=16, d_model=d_model,  # Expanded to 64
                                          dropout=dropout)
+        
+        # Synergy encoder (NEW)
+        self.synergy_encoder = nn.Sequential(
+            nn.Linear(32, d_model // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model // 2, d_model)
+        )
         
         # Cross-attention to combine all information
         self.cross_attention = MultiHeadAttention(d_model, num_heads, dropout)
@@ -230,14 +241,18 @@ class BalatroNetwork(nn.Module):
         
     def forward(self, obs: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Forward pass through the network
+        Forward pass through the network (EXPANDED for full game)
         
         Args:
             obs: Dictionary containing:
                 - hand: (batch_size, 8, 32)
-                - jokers: (batch_size, 5, 64)
+                - jokers: (batch_size, 5, 128)
+                - consumables: (batch_size, 6, 64)
+                - shop_items: (batch_size, 10, 128)
+                - vouchers: (batch_size, 5, 32)
                 - blind: (batch_size, 16)
-                - scalar: (batch_size, 32)
+                - scalar: (batch_size, 64)
+                - synergies: (batch_size, 32)
         
         Returns:
             card_features: (batch_size, 8, d_model) - features for each card
@@ -246,22 +261,40 @@ class BalatroNetwork(nn.Module):
         batch_size = obs["hand"].size(0)
         
         # Encode cards
-        # Mask for valid cards (non-zero cards)
         card_mask = (obs["hand"].sum(dim=-1) != 0).float()
-        # Shape mask properly: (batch, seq_len) -> (batch, 1, seq_len) for broadcasting
         card_mask = card_mask.unsqueeze(1)
         card_features = self.card_encoder(obs["hand"], card_mask)
         
-        # Encode jokers
-        joker_mask = (obs["jokers"].sum(dim=-1) != 0).float()
+        # Encode jokers (expanded to 128 dims)
         joker_features = self.joker_encoder(obs["jokers"])
         
-        # Encode game state
+        # Encode consumables (new)
+        consumable_features = self.consumable_encoder(obs["consumables"])
+        
+        # Encode shop items (new)
+        shop_features = self.shop_encoder(obs["shop_items"])
+        
+        # Encode vouchers (new)
+        voucher_features = self.voucher_encoder(obs["vouchers"])
+        
+        # Encode game state (expanded to 64 scalar dims)
         state_features = self.state_encoder(obs["scalar"], obs["blind"])
         state_features = state_features.unsqueeze(1)  # (batch_size, 1, d_model)
         
-        # Combine all features
-        combined_features = torch.cat([card_features, joker_features, state_features], dim=1)
+        # Encode synergy features (NEW)
+        synergy_features = self.synergy_encoder(obs["synergies"])
+        synergy_features = synergy_features.unsqueeze(1)  # (batch_size, 1, d_model)
+        
+        # Combine all features (cards + jokers + consumables + shop + vouchers + state + synergies)
+        combined_features = torch.cat([
+            card_features,      # 8 cards
+            joker_features,     # 5 jokers
+            consumable_features,  # 6 consumables
+            shop_features,      # 10 shop items
+            voucher_features,   # 5 vouchers
+            state_features,     # 1 state
+            synergy_features    # 1 synergy
+        ], dim=1)  # Total: 36 tokens
         
         # Apply fusion layers
         for layer in self.fusion_layers:
@@ -270,7 +303,7 @@ class BalatroNetwork(nn.Module):
         # Split back into card features and global features
         card_features = combined_features[:, :8, :]
         
-        # Global pooling for value estimation
+        # Global pooling for value estimation (average over all tokens)
         global_features = combined_features.mean(dim=1)
         
         return card_features, global_features
@@ -290,12 +323,12 @@ class PolicyValueNetwork(nn.Module):
         
         self.backbone = BalatroNetwork(d_model=d_model, dropout=dropout)
         
-        # Policy heads
+        # Policy heads (EXPANDED for full game)
         self.action_type_head = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(d_model, 5)  # 5 action types
+            nn.Linear(d_model, 12)  # 12 action types (expanded)
         )
         
         self.card_selection_head = nn.Sequential(
@@ -305,11 +338,32 @@ class PolicyValueNetwork(nn.Module):
             nn.Linear(d_model // 2, 1)  # Per-card selection probability
         )
         
-        self.shop_selection_head = nn.Sequential(
+        self.shop_item_head = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(d_model, 7)  # 7 shop slots
+            nn.Linear(d_model, 7)  # Shop item index (up to 7 items total)
+        )
+        
+        self.joker_slot_head = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model // 2, 5)  # 5 joker slots
+        )
+        
+        self.consumable_slot_head = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model // 2, 2)  # 2 consumable slots per type
+        )
+        
+        self.target_card_head = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model // 2, 8)  # Target card index (for tarot/spectral)
         )
         
         # Value head
@@ -336,14 +390,23 @@ class PolicyValueNetwork(nn.Module):
         """
         card_features, global_features = self.backbone(obs)
         
-        # Policy outputs
+        # Policy outputs (EXPANDED)
         action_type_logits = self.action_type_head(global_features)
         
         # Per-card selection logits
         card_selection_logits = self.card_selection_head(card_features).squeeze(-1)
         
-        # Shop selection logits
-        shop_selection_logits = self.shop_selection_head(global_features)
+        # Shop item selection logits
+        shop_item_logits = self.shop_item_head(global_features)
+        
+        # Joker slot selection logits
+        joker_slot_logits = self.joker_slot_head(global_features)
+        
+        # Consumable slot selection logits
+        consumable_slot_logits = self.consumable_slot_head(global_features)
+        
+        # Target card selection logits (for tarot/spectral effects)
+        target_card_logits = self.target_card_head(global_features)
         
         # Value estimate
         value = self.value_head(global_features)
@@ -351,7 +414,10 @@ class PolicyValueNetwork(nn.Module):
         action_logits = {
             "action_type": action_type_logits,
             "card_selection": card_selection_logits,
-            "shop_selection": shop_selection_logits
+            "shop_item_index": shop_item_logits,
+            "joker_slot": joker_slot_logits,
+            "consumable_slot": consumable_slot_logits,
+            "target_card_index": target_card_logits,
         }
         
         return action_logits, value

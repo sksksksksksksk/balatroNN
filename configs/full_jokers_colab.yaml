@@ -1,0 +1,83 @@
+# Google Colab Configuration for 150 Jokers - ADVANCED TRAINING
+# Optimized for maximum performance on T4 GPU (16GB VRAM)
+# Fits within 12-hour runtime limit with aggressive optimization
+# Expected: ~10M timesteps in 12 hours on T4
+
+environment:
+  max_steps: 2500  # Longer episodes for complex joker strategies
+  starting_deck_size: 52
+
+model:
+  d_model: 320  # Increased from 256 for better capacity
+  num_heads: 8
+  num_layers: 6  # Balanced depth for T4
+  dropout: 0.1
+
+training:
+  # ADVANCED: 10M timesteps with aggressive optimization
+  total_timesteps: 10_000_000
+  learning_rate: 0.0003
+  
+  # Optimized for T4 memory and throughput
+  batch_size: 512  # Larger batches with mixed precision
+  n_epochs: 10  # More epochs per update
+  n_steps: 2048  # Longer rollouts for better value estimates
+  
+  # PPO hyperparameters (tuned for complex joker strategies)
+  gamma: 0.995  # Longer-term planning
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.025  # Higher exploration for 150 jokers
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  
+  normalize_advantage: true
+  target_kl: 0.02  # Slightly higher for faster learning
+  device: "auto"
+  
+  # Full curriculum (7 phases) for 150 jokers
+  use_curriculum: true
+  curriculum_phases: 7  # All phases!
+  curriculum_mode: "timestep"  # Progress based on timesteps
+  
+  # Gradient accumulation for effective larger batches
+  gradient_accumulation_steps: 2  # Effective batch = 1024
+
+logging:
+  log_dir: "logs/advanced_t4_training"
+  log_interval: 5  # Frequent logging
+  save_interval: 25  # Save every 25 updates (~10-15 min)
+  use_tensorboard: true
+  use_wandb: false  # Set to true if you have W&B account
+  
+  # Advanced metrics
+  log_synergies: true
+  log_joker_usage: true
+  log_curriculum_progress: true
+
+checkpoints:
+  dir: "checkpoints/advanced_t4_training"
+  save_best: true
+  keep_last_n: 5  # Keep more checkpoints
+  save_frequency: 100  # Also save every 100 updates
+
+# AGGRESSIVE T4 OPTIMIZATIONS
+optimization:
+  # Critical for T4
+  mixed_precision: true  # FP16 for 2x speed + memory
+  
+  # Memory optimization
+  gradient_checkpointing: false  # Keep off unless OOM
+  gradient_accumulation: true
+  
+  # Parallelization
+  num_workers: 3  # T4 has decent CPU
+  pin_memory: true  # Faster CPU->GPU transfer
+  
+  # Compiler optimizations
+  torch_compile: false  # Set to true if PyTorch 2.0+
+  
+  # Memory management
+  empty_cache_interval: 50  # Clear CUDA cache periodically
+  max_memory_allocated: 14.5  # Leave 1.5GB headroom on T4
+
