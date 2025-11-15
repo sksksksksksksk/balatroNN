@@ -1,0 +1,37 @@
+# Core ML/RL dependencies
+torch>=2.1.0
+numpy>=1.24.0
+gymnasium>=0.29.0
+
+# PPO and RL utilities
+stable-baselines3>=2.1.0
+
+# Monitoring and logging
+tensorboard>=2.14.0
+wandb>=0.15.0
+tqdm>=4.66.0
+
+# Data handling
+pydantic>=2.0.0
+pyyaml>=6.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Game interface - Vision and automation for real game
+pyautogui>=0.9.54  # Screen capture and input automation
+pillow>=10.0.0  # Image processing
+opencv-python>=4.8.0  # Computer vision
+mss>=9.0.0  # Fast screen capture
+pytesseract>=0.3.10  # OCR for text detection
+pynput>=1.7.6  # Keyboard/mouse control
+
+# Development
+pytest>=7.4.0
+black>=23.0.0
+
+# Optional: TPU support (Google Colab/Cloud TPU)
+# Uncomment if using TPU:
+# torch-xla  # PyTorch/XLA for TPU
+# cloud-tpu-client==0.10  # TPU client libraries
+

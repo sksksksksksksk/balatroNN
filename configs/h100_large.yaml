@@ -1,0 +1,56 @@
+# Large model configuration optimized for H100 GPU
+# Maximizes model capacity and batch size for a single H100 (80GB)
+
+environment:
+  max_steps: 2000
+  starting_deck_size: 52
+
+model:
+  d_model: 512  # Large model dimension
+  num_heads: 16
+  num_layers: 12  # Deep transformer
+  dropout: 0.1
+
+training:
+  total_timesteps: 100_000_000  # 100M timesteps for serious training
+  learning_rate: 0.0001  # Lower LR for large model
+  batch_size: 1024  # Large batch size (H100 can handle it)
+  n_epochs: 10
+  n_steps: 4096  # Larger rollouts
+  
+  gamma: 0.995  # Slightly higher discount for longer-term planning
+  gae_lambda: 0.95
+  clip_range: 0.2
+  clip_range_vf: 0.2  # Enable value clipping
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 1.0
+  
+  normalize_advantage: true
+  target_kl: 0.01
+  device: "cuda"
+
+logging:
+  log_dir: "logs/h100_large"
+  log_interval: 10
+  save_interval: 100
+  use_tensorboard: true
+  use_wandb: true
+  wandb_project: "balatroNN"
+
+checkpoints:
+  dir: "checkpoints/h100_large"
+  save_best: true
+  keep_last_n: 10
+
+evaluation:
+  eval_freq: 500
+  n_eval_episodes: 20
+  deterministic: true
+
+curriculum:
+  enabled: true
+  start_ante: 1
+  max_ante: 8
+  ante_increase_threshold: 0.75
+

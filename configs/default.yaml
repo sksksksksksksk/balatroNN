@@ -1,0 +1,67 @@
+# Default training configuration for BalatroNN
+
+# Environment settings
+environment:
+  max_steps: 2000
+  starting_deck_size: 52
+
+# Model architecture
+model:
+  d_model: 256
+  num_heads: 8
+  num_layers: 6
+  dropout: 0.1
+
+# PPO training parameters
+training:
+  total_timesteps: 10_000_000  # 10M timesteps
+  learning_rate: 0.0003
+  batch_size: 256
+  n_epochs: 10
+  n_steps: 2048  # Steps per rollout
+  
+  # PPO hyperparameters
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  clip_range_vf: null  # Set to value to enable value clipping
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  
+  # Optimization
+  normalize_advantage: true
+  target_kl: 0.01
+  
+  # Device
+  device: "cuda"  # "cuda" or "cpu"
+
+# Logging
+logging:
+  log_dir: "logs"
+  log_interval: 10  # Log every N updates
+  save_interval: 100  # Save checkpoint every N updates
+  use_tensorboard: true
+  use_wandb: false
+  wandb_project: "balatroNN"
+  wandb_entity: null
+
+# Checkpoints
+checkpoints:
+  dir: "checkpoints"
+  save_best: true
+  keep_last_n: 5  # Keep last N checkpoints
+
+# Evaluation
+evaluation:
+  eval_freq: 1000  # Evaluate every N updates
+  n_eval_episodes: 10
+  deterministic: true
+
+# Curriculum learning (optional)
+curriculum:
+  enabled: false
+  start_ante: 1
+  max_ante: 8
+  ante_increase_threshold: 0.7  # Win rate threshold to increase difficulty
+

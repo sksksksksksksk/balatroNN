@@ -1,0 +1,43 @@
+# Google Colab optimized configuration
+# Designed for free T4 GPU (~12 hour runtime limit)
+
+environment:
+  max_steps: 1000
+  starting_deck_size: 52
+
+model:
+  d_model: 256  # Good balance for T4
+  num_heads: 8
+  num_layers: 4  # Lighter than default
+  dropout: 0.1
+
+training:
+  total_timesteps: 2_000_000  # 2M (finishes in ~3-4 hours on T4)
+  learning_rate: 0.0003
+  batch_size: 256  # T4 can handle this
+  n_epochs: 8  # Reduced for speed
+  n_steps: 1024  # Smaller rollouts for faster updates
+  
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.015
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  
+  normalize_advantage: true
+  target_kl: 0.015
+  device: "auto"  # Auto-detect GPU/TPU
+
+logging:
+  log_dir: "logs/colab"
+  log_interval: 5  # More frequent updates for monitoring
+  save_interval: 50  # Save every 50 updates (~20-30 min)
+  use_tensorboard: true
+  use_wandb: false
+
+checkpoints:
+  dir: "checkpoints/colab"
+  save_best: true
+  keep_last_n: 3  # Save disk space
+
