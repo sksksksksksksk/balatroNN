@@ -374,7 +374,6 @@ class GameState:
             scalar_state[27] = len(self.shop_vouchers) / 2.0
         
         # Hand level info (sample a few important hands)
-        from balatro_env import HandType
         for i, hand_type in enumerate([HandType.PAIR, HandType.TWO_PAIR, HandType.FLUSH, HandType.STRAIGHT]):
             if i < 4 and hand_type in self.hand_levels:
                 chips, mult = self.hand_levels[hand_type]

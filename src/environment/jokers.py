@@ -291,13 +291,13 @@ class JokerEffectProcessor:
         elif name == "Blue Joker":
             return len(game_state.deck) > 0
         elif name == "Stone Joker":
-            from balatro_env import Enhancement
+            from .balatro_env import Enhancement
             return any(c.enhancement == Enhancement.STONE for c in game_state.deck)
         elif name == "Steel Joker":
-            from balatro_env import Enhancement
+            from .balatro_env import Enhancement
             return any(c.enhancement == Enhancement.STEEL for c in game_state.deck)
         elif name == "Glass Joker":
-            from balatro_env import Enhancement
+            from .balatro_env import Enhancement
             return any(c.enhancement == Enhancement.GLASS for c in game_state.deck)
         elif name == "Loyalty Card":
             hands_played = joker.persistent_state.get('hands_played', 0)
@@ -317,7 +317,7 @@ class JokerEffectProcessor:
         elif name == "Vagabond":
             return game_state.money <= 4
         elif name == "Golden Ticket":
-            from balatro_env import Enhancement
+            from .balatro_env import Enhancement
             card = context.get('card')
             return card and card.enhancement.name == "GOLD"
         elif name == "Space Joker":
@@ -403,15 +403,15 @@ class JokerEffectProcessor:
         elif name == "Blue Joker":
             effect['chips'] = 2 * len(game_state.deck)
         elif name == "Stone Joker":
-            from balatro_env import Enhancement
+            from .balatro_env import Enhancement
             stone_count = sum(1 for c in game_state.deck if c.enhancement == Enhancement.STONE)
             effect['chips'] = 25 * stone_count
         elif name == "Steel Joker":
-            from balatro_env import Enhancement
+            from .balatro_env import Enhancement
             steel_count = sum(1 for c in game_state.deck if c.enhancement == Enhancement.STEEL)
             effect['xmult'] = 1.5 ** steel_count
         elif name == "Glass Joker":
-            from balatro_env import Enhancement
+            from .balatro_env import Enhancement
             glass_count = sum(1 for c in game_state.deck if c.enhancement == Enhancement.GLASS)
             effect['xmult'] = 2.0 ** glass_count
         elif name == "Loyalty Card":

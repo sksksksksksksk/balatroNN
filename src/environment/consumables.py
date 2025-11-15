@@ -216,7 +216,7 @@ class PlanetCard:
         Returns:
             Dict with effect results
         """
-        from balatro_env import HandType
+        from .balatro_env import HandType
         
         # Find the HandType enum member
         hand_type = None
