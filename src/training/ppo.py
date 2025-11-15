@@ -62,8 +62,12 @@ class PPOBuffer:
         self.observations = {
             "hand": [],
             "jokers": [],
+            "consumables": [],
+            "shop_items": [],
+            "vouchers": [],
             "blind": [],
-            "scalar": []
+            "scalar": [],
+            "synergies": []
         }
         self.actions = {
             "action_type": [],
