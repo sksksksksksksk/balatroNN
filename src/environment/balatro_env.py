@@ -545,6 +545,13 @@ class BalatroEnv(gym.Env):
             reward += 1000.0  # Huge bonus for winning the run
             terminated = True
         
+        # Penalty for timeout (discourages reward hacking via inaction)
+        if truncated and not terminated:
+            reward -= 100.0  # Significant penalty for running out the clock
+        
+        # Small time penalty to encourage efficient play
+        reward -= 0.01
+        
         obs = self.state.to_observation(self.synergy_detector)
         info = {
             "ante": self.state.ante,
@@ -591,8 +598,16 @@ class BalatroEnv(gym.Env):
             self.state.hand.pop(idx)
         self._draw_cards(len(selected_indices))
         
-        # Reward is proportional to chips scored
-        return np.log1p(total_score) / 10.0
+        # Reward is proportional to chips scored (increased to encourage play)
+        base_reward = np.log1p(total_score) / 5.0  # Doubled from /10.0
+        
+        # Bonus for making progress toward blind goal
+        if self.state.current_blind:
+            progress = min(1.0, self.state.chips_scored / self.state.current_blind.chip_requirement)
+            progress_bonus = progress * 5.0  # Up to +5 reward for getting close
+            return base_reward + progress_bonus
+        
+        return base_reward
     
     def _discard_cards(self, card_selection: np.ndarray) -> float:
         """Discard selected cards and draw new ones"""
@@ -714,7 +729,8 @@ class BalatroEnv(gym.Env):
     
     def _skip_action(self) -> float:
         """Skip current action"""
-        return 0.0
+        # Small penalty to discourage spam-skipping
+        return -0.1
     
     def _reroll_shop(self) -> float:
         """Reroll shop items"""

@@ -3,8 +3,18 @@
 Evaluation script for trained BalatroNN models
 
 Usage:
+    # Evaluate with automatic config detection (infers from checkpoint weights)
     python evaluate.py --checkpoint checkpoints/final_model.pt --episodes 100
-    python evaluate.py --checkpoint checkpoints/final_model.pt --render
+    
+    # Evaluate with explicit config (recommended for clarity)
+    python evaluate.py --checkpoint checkpoints/a100_aggressive/checkpoint_*.pt --config configs/a100_aggressive.yaml --episodes 100
+    
+    # Evaluate with rendering
+    python evaluate.py --checkpoint checkpoints/final_model.pt --config configs/a100_aggressive.yaml --render
+    
+Note:
+    The config file must match the configuration used during training, especially the d_model parameter.
+    If the checkpoint was trained with a100_aggressive.yaml (d_model=768), use that same config for evaluation.
 """
 
 import argparse
@@ -12,12 +22,13 @@ import sys
 from pathlib import Path
 import torch
 import numpy as np
+import yaml
 from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from environment import BalatroEnv
-from models import PolicyValueNetwork
+from models import PolicyValueNetwork, create_model
 from utils import get_device
 
 
@@ -29,6 +40,14 @@ def parse_args():
         type=str,
         required=True,
         help="Path to model checkpoint"
+    )
+    
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to config file (required if checkpoint doesn't contain config). "
+             "Should match the config used for training."
     )
     
     parser.add_argument(
@@ -107,12 +126,13 @@ def evaluate(model, env, num_episodes: int, deterministic: bool = True,
             with torch.no_grad():
                 action, _, _, value = model.get_action_and_value(obs_tensor, deterministic=deterministic)
             
-            # Convert to numpy
-            action_np = {
-                "action_type": action["action_type"].cpu().numpy()[0],
-                "card_selection": action["card_selection"].cpu().numpy()[0],
-                "shop_selection": action["shop_selection"].cpu().numpy()[0]
-            }
+            # Convert to numpy - handle all action components
+            action_np = {}
+            for key, val in action.items():
+                if torch.is_tensor(val):
+                    action_np[key] = val.cpu().numpy()[0]
+                else:
+                    action_np[key] = val
             
             # Step environment
             obs, reward, terminated, truncated, info = env.step(action_np)
@@ -165,19 +185,68 @@ def main():
     print(f"Using device: {device_name}")
     
     print(f"Loading checkpoint from {args.checkpoint}")
-    checkpoint = torch.load(args.checkpoint, map_location=device)
+    checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
+    
+    # Load configuration
+    model_config = None
+    
+    # First, try to get config from checkpoint
+    if "config" in checkpoint:
+        config_obj = checkpoint["config"]
+        # Handle both dict and config object
+        if hasattr(config_obj, 'model'):
+            # It's a config object (e.g., PPOConfig)
+            model_config = vars(config_obj.model) if hasattr(config_obj.model, '__dict__') else config_obj.model
+        elif isinstance(config_obj, dict):
+            # It's a dictionary
+            model_config = config_obj.get("model", {})
+        else:
+            model_config = None
+        
+        if model_config:
+            d_model_val = model_config.get('d_model') if isinstance(model_config, dict) else getattr(model_config, 'd_model', 'unknown')
+            print(f"✓ Loaded config from checkpoint: d_model={d_model_val}")
+    # Otherwise, load from config file if provided
+    if not model_config and args.config:
+        with open(args.config, 'r') as f:
+            full_config = yaml.safe_load(f)
+            model_config = full_config.get("model", {})
+        print(f"✓ Loaded config from {args.config}: d_model={model_config.get('d_model', 'unknown')}")
+    
+    # If still no model config, try to infer from checkpoint state dict
+    if not model_config:
+        try:
+            # Check the size of a known parameter to infer d_model
+            param_shape = checkpoint["model_state_dict"]["backbone.card_encoder.card_embedding.0.weight"].shape
+            inferred_d_model = param_shape[0]  # Output dimension
+            model_config = {"d_model": inferred_d_model, "dropout": 0.1}
+            print(f"✓ Inferred model config from checkpoint: d_model={inferred_d_model}")
+        except Exception as e:
+            print(f"⚠ Warning: Could not infer model config from checkpoint")
+            print(f"   Error: {e}")
+            print(f"   Please provide --config argument with the correct config file")
+            raise ValueError(
+                "Could not determine model architecture. Please provide --config argument.\n"
+                f"For example: --config configs/a100_aggressive.yaml"
+            )
     
     # Create environment
     env = BalatroEnv()
     
-    # Create model
-    model = PolicyValueNetwork()
+    # Convert model_config to dict if it's an object
+    if model_config and not isinstance(model_config, dict):
+        model_config = vars(model_config) if hasattr(model_config, '__dict__') else {}
+    
+    # Create model with correct config
+    model = create_model(model_config)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
     
     print(f"Model loaded. Timesteps trained: {checkpoint.get('num_timesteps', 'unknown')}")
-    print(f"Device: {args.device}")
+    print(f"Model architecture: d_model={model_config.get('d_model')}, "
+          f"num_layers={model_config.get('num_layers', 'default')}")
+    print(f"Device: {device_name}")
     print(f"Evaluating for {args.episodes} episodes...")
     print("")
     
