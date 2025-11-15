@@ -1,21 +1,21 @@
-# A100 GPU optimized configuration
-# Designed for NVIDIA A100 (40GB or 80GB VRAM)
-# Balances model size, batch size, and training speed
+# A100 GPU AGGRESSIVE configuration
+# Designed to maximize A100 40GB utilization
+# Uses 30-35GB VRAM for maximum training speed
 
 environment:
   max_steps: 1500
   starting_deck_size: 52
 
 model:
-  d_model: 512  # Optimized for A100 - uses more VRAM
+  d_model: 768  # Much larger - use that A100 power!
   num_heads: 16
-  num_layers: 10  # Deep enough for complex strategies
+  num_layers: 12  # Deep network for complex strategies
   dropout: 0.1
 
 training:
-  total_timesteps: 50_000_000  # 50M timesteps (~8-12 hours on A100)
+  total_timesteps: 50_000_000
   learning_rate: 0.0002
-  batch_size: 2048  # Large batch size to use A100 capacity
+  batch_size: 3072  # MASSIVE batch size - A100 can handle it!
   n_epochs: 10
   n_steps: 4096  # Large rollout buffer
   
@@ -32,27 +32,25 @@ training:
   device: "cuda"
   
   # A100-specific optimizations
-  use_mixed_precision: true  # A100 has excellent FP16/BF16 support
-  compile_model: true  # PyTorch 2.0+ compilation for speedup
+  use_mixed_precision: true  # Critical for A100 performance
+  compile_model: true  # PyTorch 2.0+ compilation
 
 logging:
-  log_dir: "logs/a100_training"
+  log_dir: "logs/a100_aggressive"
   log_interval: 10
   save_interval: 100
   use_tensorboard: true
 
 checkpoints:
-  dir: "checkpoints/a100"
+  dir: "checkpoints/a100_aggressive"
   save_best: true
-  keep_last_n: 8
-  save_optimizer: true  # Save optimizer state for resuming
+  keep_last_n: 5
+  save_optimizer: true
 
 evaluation:
   eval_freq: 500
   n_eval_episodes: 15
   deterministic: true
-  
-  # Advanced evaluation
   save_eval_videos: false
   eval_on_curriculum: true
 
@@ -61,15 +59,13 @@ curriculum:
   start_ante: 1
   max_ante: 8
   ante_increase_threshold: 0.75
-  
-  # Progressive difficulty
   adapt_learning_rate: true
   lr_decay_factor: 0.95
 
 # Performance optimizations
 optimization:
-  gradient_checkpointing: false  # A100 has enough memory
+  gradient_checkpointing: false  # A100 has plenty of memory
   pin_memory: true
-  num_workers: 8  # More workers for faster data loading
+  num_workers: 8  # More workers for data loading
   prefetch_factor: 4  # More prefetching
 
