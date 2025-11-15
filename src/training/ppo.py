@@ -68,7 +68,10 @@ class PPOBuffer:
         self.actions = {
             "action_type": [],
             "card_selection": [],
-            "shop_item_index": []
+            "shop_item_index": [],
+            "joker_slot": [],
+            "consumable_slot": [],
+            "target_card_index": []
         }
         self.rewards = []
         self.values = []
@@ -157,7 +160,10 @@ class PPOBuffer:
         actions_batch = {
             "action_type": torch.as_tensor(np.array(self.actions["action_type"]), dtype=torch.long, device=self.config.device),
             "card_selection": torch.as_tensor(np.array(self.actions["card_selection"]), dtype=torch.float32, device=self.config.device),
-            "shop_item_index": torch.as_tensor(np.array(self.actions["shop_item_index"]), dtype=torch.long, device=self.config.device)
+            "shop_item_index": torch.as_tensor(np.array(self.actions["shop_item_index"]), dtype=torch.long, device=self.config.device),
+            "joker_slot": torch.as_tensor(np.array(self.actions["joker_slot"]), dtype=torch.long, device=self.config.device),
+            "consumable_slot": torch.as_tensor(np.array(self.actions["consumable_slot"]), dtype=torch.long, device=self.config.device),
+            "target_card_index": torch.as_tensor(np.array(self.actions["target_card_index"]), dtype=torch.long, device=self.config.device)
         }
         
         log_probs_batch = torch.as_tensor(self.log_probs, dtype=torch.float32, device=self.config.device)
@@ -236,7 +242,10 @@ class PPOTrainer:
             action_np = {
                 "action_type": action["action_type"].cpu().numpy()[0],
                 "card_selection": action["card_selection"].cpu().numpy()[0],
-                "shop_item_index": action["shop_item_index"].cpu().numpy()[0]
+                "shop_item_index": action["shop_item_index"].cpu().numpy()[0],
+                "joker_slot": action["joker_slot"].cpu().numpy()[0],
+                "consumable_slot": action["consumable_slot"].cpu().numpy()[0],
+                "target_card_index": action["target_card_index"].cpu().numpy()[0]
             }
             
             # Step environment

@@ -450,8 +450,17 @@ class PolicyValueNetwork(nn.Module):
         # Card selection distribution (independent Bernoulli for each card)
         card_selection_dist = torch.distributions.Bernoulli(logits=action_logits["card_selection"])
         
-        # Shop selection distribution
-        shop_selection_dist = torch.distributions.Categorical(logits=action_logits["shop_item_index"])
+        # Shop item selection distribution
+        shop_item_dist = torch.distributions.Categorical(logits=action_logits["shop_item_index"])
+        
+        # Joker slot selection distribution
+        joker_slot_dist = torch.distributions.Categorical(logits=action_logits["joker_slot"])
+        
+        # Consumable slot selection distribution
+        consumable_slot_dist = torch.distributions.Categorical(logits=action_logits["consumable_slot"])
+        
+        # Target card selection distribution
+        target_card_dist = torch.distributions.Categorical(logits=action_logits["target_card_index"])
         
         if action is None:
             # Sample new action
@@ -459,27 +468,42 @@ class PolicyValueNetwork(nn.Module):
                 action_type = action_logits["action_type"].argmax(dim=-1)
                 card_selection = (action_logits["card_selection"] > 0).float()
                 shop_item_index = action_logits["shop_item_index"].argmax(dim=-1)
+                joker_slot = action_logits["joker_slot"].argmax(dim=-1)
+                consumable_slot = action_logits["consumable_slot"].argmax(dim=-1)
+                target_card_index = action_logits["target_card_index"].argmax(dim=-1)
             else:
                 action_type = action_type_dist.sample()
                 card_selection = card_selection_dist.sample()
-                shop_item_index = shop_selection_dist.sample()
+                shop_item_index = shop_item_dist.sample()
+                joker_slot = joker_slot_dist.sample()
+                consumable_slot = consumable_slot_dist.sample()
+                target_card_index = target_card_dist.sample()
             
             action = {
                 "action_type": action_type,
                 "card_selection": card_selection,
-                "shop_item_index": shop_item_index
+                "shop_item_index": shop_item_index,
+                "joker_slot": joker_slot,
+                "consumable_slot": consumable_slot,
+                "target_card_index": target_card_index
             }
         
         # Compute log probabilities
         action_type_log_prob = action_type_dist.log_prob(action["action_type"])
         card_selection_log_prob = card_selection_dist.log_prob(action["card_selection"]).sum(dim=-1)
-        shop_item_index_log_prob = shop_selection_dist.log_prob(action["shop_item_index"])
+        shop_item_index_log_prob = shop_item_dist.log_prob(action["shop_item_index"])
+        joker_slot_log_prob = joker_slot_dist.log_prob(action["joker_slot"])
+        consumable_slot_log_prob = consumable_slot_dist.log_prob(action["consumable_slot"])
+        target_card_index_log_prob = target_card_dist.log_prob(action["target_card_index"])
         
         # Total log probability
-        log_prob = action_type_log_prob + card_selection_log_prob + shop_item_index_log_prob
+        log_prob = (action_type_log_prob + card_selection_log_prob + shop_item_index_log_prob + 
+                   joker_slot_log_prob + consumable_slot_log_prob + target_card_index_log_prob)
         
         # Compute entropy
-        entropy = action_type_dist.entropy() + card_selection_dist.entropy().sum(dim=-1) + shop_selection_dist.entropy()
+        entropy = (action_type_dist.entropy() + card_selection_dist.entropy().sum(dim=-1) + 
+                  shop_item_dist.entropy() + joker_slot_dist.entropy() + 
+                  consumable_slot_dist.entropy() + target_card_dist.entropy())
         
         return action, log_prob, entropy, value.squeeze(-1)
 
