@@ -17,7 +17,7 @@ training:
   total_timesteps: 20_000_000
   learning_rate: 0.0002
   batch_size: 8192  # Mini-batch size for training
-  n_epochs: 10
+  n_epochs: 4  # Reduced for faster training - prevents overfitting
   n_steps: 16384  # HUGE rollout buffer - this controls actual VRAM usage!
   
   gamma: 0.995
@@ -50,7 +50,7 @@ checkpoints:
 
 evaluation:
   eval_freq: 500
-  n_eval_episodes: 15
+  n_eval_episodes: 8  # Reduced for faster evaluation cycles
   deterministic: true
   save_eval_videos: false
   eval_on_curriculum: true
