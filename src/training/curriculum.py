@@ -229,3 +229,4 @@ if __name__ == "__main__":
         phase = curriculum.get_phase_for_step(step)
         print(f"Step {step:,}: {phase.name} (Tiers: {phase.enabled_tiers})")
 
+
