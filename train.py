@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from environment import BalatroEnv
 from models import PolicyValueNetwork
 from training import PPOTrainer, PPOConfig
+from training.curriculum import JokerCurriculum
 from utils import load_config, save_config, Logger, get_device, print_device_info
 
 
@@ -138,9 +139,20 @@ def main():
         device=device
     )
     
+    # Create curriculum if enabled
+    curriculum = None
+    curriculum_config = config.get("curriculum", {})
+    if curriculum_config.get("enabled", False):
+        print("\nInitializing curriculum learning...")
+        curriculum = JokerCurriculum(total_timesteps=config["training"]["total_timesteps"])
+        curriculum.print_curriculum_summary()
+        # Store curriculum config for trainer
+        curriculum.adapt_learning_rate = curriculum_config.get("adapt_learning_rate", False)
+        curriculum.lr_decay_factor = curriculum_config.get("lr_decay_factor", 0.95)
+    
     # Create trainer
     print("\nInitializing PPO trainer...")
-    trainer = PPOTrainer(model, env, ppo_config)
+    trainer = PPOTrainer(model, env, ppo_config, curriculum=curriculum)
     
     # Resume from checkpoint if specified
     if args.resume:

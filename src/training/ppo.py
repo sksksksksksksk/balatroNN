@@ -199,13 +199,15 @@ class PPOTrainer:
     Handles the training loop, optimization, and logging
     """
     
-    def __init__(self, model: nn.Module, env: Any, config: PPOConfig):
+    def __init__(self, model: nn.Module, env: Any, config: PPOConfig, curriculum: Optional[Any] = None):
         self.model = model.to(config.device)
         self.env = env
         self.config = config
+        self.curriculum = curriculum
         
         # Optimizer
         self.optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+        self.initial_lr = config.learning_rate
         
         # Rollout buffer
         self.buffer = PPOBuffer(config.n_steps, env.observation_space, config)
@@ -422,7 +424,52 @@ class PPOTrainer:
         
         start_time = time.time()
         
+        # Initialize curriculum if enabled
+        if self.curriculum:
+            phase = self.curriculum.get_phase_for_step(self.num_timesteps)
+            self.env.set_curriculum_phase(
+                enabled_tiers=phase.enabled_tiers,
+                max_joker_slots=phase.max_joker_slots,
+                shop_enabled=phase.shop_enabled,
+                consumables_enabled=phase.consumables_enabled,
+                vouchers_enabled=phase.vouchers_enabled
+            )
+            print(f"\n🎓 Curriculum Initialized: {phase.name}")
+            print(f"   Enabled tiers: {phase.enabled_tiers if phase.enabled_tiers else 'None'}")
+            print(f"   Max joker slots: {phase.max_joker_slots}")
+            print(f"   Description: {phase.description}\n")
+        
         while self.num_timesteps < total_timesteps:
+            # Check for curriculum phase transition
+            if self.curriculum:
+                if self.curriculum.update_phase(self.num_timesteps):
+                    phase = self.curriculum.get_current_phase()
+                    self.env.set_curriculum_phase(
+                        enabled_tiers=phase.enabled_tiers,
+                        max_joker_slots=phase.max_joker_slots,
+                        shop_enabled=phase.shop_enabled,
+                        consumables_enabled=phase.consumables_enabled,
+                        vouchers_enabled=phase.vouchers_enabled
+                    )
+                    
+                    # Adapt learning rate if enabled
+                    if hasattr(self.curriculum, 'adapt_learning_rate') and self.curriculum.adapt_learning_rate:
+                        new_lr = self.initial_lr * (self.curriculum.lr_decay_factor ** self.curriculum.current_phase_idx)
+                        for param_group in self.optimizer.param_groups:
+                            param_group['lr'] = new_lr
+                        print(f"\n🎓 CURRICULUM PHASE TRANSITION!")
+                        print(f"   New Phase: {phase.name} (Phase {self.curriculum.current_phase_idx + 1}/{len(self.curriculum.phases)})")
+                        print(f"   Enabled tiers: {phase.enabled_tiers if phase.enabled_tiers else 'None'}")
+                        print(f"   Max joker slots: {phase.max_joker_slots}")
+                        print(f"   Learning rate: {self.initial_lr:.6f} → {new_lr:.6f} (decay factor: {self.curriculum.lr_decay_factor})")
+                        print(f"   Description: {phase.description}\n")
+                    else:
+                        print(f"\n🎓 CURRICULUM PHASE TRANSITION!")
+                        print(f"   New Phase: {phase.name} (Phase {self.curriculum.current_phase_idx + 1}/{len(self.curriculum.phases)})")
+                        print(f"   Enabled tiers: {phase.enabled_tiers if phase.enabled_tiers else 'None'}")
+                        print(f"   Max joker slots: {phase.max_joker_slots}")
+                        print(f"   Description: {phase.description}\n")
+            
             # Collect rollouts
             rollout_stats = self.collect_rollouts()
             
@@ -433,6 +480,12 @@ class PPOTrainer:
             stats = {**rollout_stats, **train_stats}
             stats["time/fps"] = self.num_timesteps / (time.time() - start_time)
             stats["time/timesteps"] = self.num_timesteps
+            
+            # Add curriculum info to stats if enabled
+            if self.curriculum:
+                phase = self.curriculum.get_current_phase()
+                stats["curriculum/phase"] = self.curriculum.current_phase_idx + 1
+                stats["curriculum/num_tiers"] = len(phase.enabled_tiers)
             
             # Logging
             if self.num_updates % log_interval == 0:

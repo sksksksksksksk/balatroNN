@@ -518,11 +518,23 @@ def create_joker_instance(joker_name: str) -> Optional[JokerInstance]:
     return None
 
 
-def get_random_joker(rarity: Optional[Rarity] = None) -> JokerInstance:
-    """Get a random joker, optionally filtered by rarity"""
+def get_random_joker(rarity: Optional[Rarity] = None, enabled_tiers: Optional[List[int]] = None) -> JokerInstance:
+    """Get a random joker, optionally filtered by rarity and curriculum tiers"""
+    # Filter by enabled tiers if curriculum is active
+    available_jokers = ALL_JOKERS
+    if enabled_tiers is not None:
+        if len(enabled_tiers) == 0:
+            # No jokers enabled - return a basic joker as fallback
+            basic_joker = get_joker_by_name("Joker")
+            return JokerInstance(data=basic_joker) if basic_joker else JokerInstance(data=ALL_JOKERS[0])
+        available_jokers = [j for j in ALL_JOKERS if j.tier in enabled_tiers]
+        if not available_jokers:
+            # Fallback to all jokers if filter is too restrictive
+            available_jokers = ALL_JOKERS
+    
     if rarity:
-        matching = [j for j in ALL_JOKERS if j.rarity == rarity]
-        joker_data = random.choice(matching) if matching else random.choice(ALL_JOKERS)
+        matching = [j for j in available_jokers if j.rarity == rarity]
+        joker_data = random.choice(matching) if matching else random.choice(available_jokers)
     else:
         # Weighted by rarity
         weights = {
@@ -535,8 +547,8 @@ def get_random_joker(rarity: Optional[Rarity] = None) -> JokerInstance:
             list(weights.keys()), 
             weights=list(weights.values())
         )[0]
-        matching = [j for j in ALL_JOKERS if j.rarity == rarity_choice]
-        joker_data = random.choice(matching)
+        matching = [j for j in available_jokers if j.rarity == rarity_choice]
+        joker_data = random.choice(matching) if matching else random.choice(available_jokers)
     
     return JokerInstance(data=joker_data)
 

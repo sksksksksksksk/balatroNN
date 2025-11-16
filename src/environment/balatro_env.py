@@ -407,6 +407,13 @@ class BalatroEnv(gym.Env):
         self.max_steps = self.config.get("max_steps", 1000)
         self.starting_deck_size = self.config.get("starting_deck_size", 52)
         
+        # Curriculum learning support
+        self.curriculum_enabled_tiers: Optional[List[int]] = None
+        self.curriculum_max_joker_slots: int = 5
+        self.curriculum_shop_enabled: bool = True
+        self.curriculum_consumables_enabled: bool = True
+        self.curriculum_vouchers_enabled: bool = True
+        
         # Expanded Action space for full game
         # Actions:
         # 0: play_hand - play selected cards
@@ -447,6 +454,19 @@ class BalatroEnv(gym.Env):
         
         self.state: Optional[GameState] = None
         self.steps = 0
+    
+    def set_curriculum_phase(self, 
+                            enabled_tiers: Optional[List[int]] = None,
+                            max_joker_slots: int = 5,
+                            shop_enabled: bool = True,
+                            consumables_enabled: bool = True,
+                            vouchers_enabled: bool = True):
+        """Update curriculum phase settings"""
+        self.curriculum_enabled_tiers = enabled_tiers
+        self.curriculum_max_joker_slots = max_joker_slots
+        self.curriculum_shop_enabled = shop_enabled
+        self.curriculum_consumables_enabled = consumables_enabled
+        self.curriculum_vouchers_enabled = vouchers_enabled
         
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[Dict, Dict]:
         """Reset the environment to initial state"""
@@ -871,7 +891,7 @@ class BalatroEnv(gym.Env):
                 num_joker_slots += 1
         
         for _ in range(num_joker_slots):
-            joker = jokers.get_random_joker()
+            joker = jokers.get_random_joker(enabled_tiers=self.curriculum_enabled_tiers)
             price = balatro_content.get_joker_price(joker.data)
             
             # Apply discounts from vouchers
@@ -884,20 +904,21 @@ class BalatroEnv(gym.Env):
             
             self.state.shop_jokers.append((joker, price))
         
-        # Generate booster packs (2 base)
-        for _ in range(2):
-            pack_data = random.choice(balatro_content.PACKS)
-            price = balatro_content.get_pack_price(pack_data.name)
-            
-            # Apply discounts
-            for voucher in self.state.vouchers_owned:
-                if hasattr(voucher, 'data'):
-                    if voucher.data.name == "Clearance Sale":
-                        price = int(price * 0.75)
-                    elif voucher.data.name == "Liquidation":
-                        price = int(price * 0.5)
-            
-            self.state.shop_packs.append((pack_data.name, price))
+        # Generate booster packs (2 base) - only if consumables enabled by curriculum
+        if self.curriculum_consumables_enabled:
+            for _ in range(2):
+                pack_data = random.choice(balatro_content.PACKS)
+                price = balatro_content.get_pack_price(pack_data.name)
+                
+                # Apply discounts
+                for voucher in self.state.vouchers_owned:
+                    if hasattr(voucher, 'data'):
+                        if voucher.data.name == "Clearance Sale":
+                            price = int(price * 0.75)
+                        elif voucher.data.name == "Liquidation":
+                            price = int(price * 0.5)
+                
+                self.state.shop_packs.append((pack_data.name, price))
         
         # Generate playing cards (2 base)
         for _ in range(2):
@@ -916,8 +937,8 @@ class BalatroEnv(gym.Env):
             
             self.state.shop_cards.append((card, price))
         
-        # Generate vouchers (1 if ante >= 2)
-        if self.state.ante >= 2:
+        # Generate vouchers (1 if ante >= 2) - only if vouchers enabled by curriculum
+        if self.state.ante >= 2 and self.curriculum_vouchers_enabled:
             # Pick a random voucher the player doesn't have
             available_vouchers = [v for v in balatro_content.VOUCHERS 
                                    if not any(owned.data.name == v.name for owned in self.state.vouchers_owned if hasattr(owned, 'data'))]
