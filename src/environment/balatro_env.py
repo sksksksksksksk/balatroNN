@@ -502,31 +502,35 @@ class BalatroEnv(gym.Env):
         action_type = action["action_type"]
         card_selection = action["card_selection"]
         
+        # Small exploration bonus for taking non-skip actions
+        if action_type != 11:  # Not skip
+            reward += 0.1  # Encourage any action over skipping
+        
         # Process action based on type (12 action types total)
         if action_type == 0:  # Play hand
-            reward = self._play_hand(card_selection)
+            reward += self._play_hand(card_selection)
         elif action_type == 1:  # Discard
-            reward = self._discard_cards(card_selection)
+            reward += self._discard_cards(card_selection)
         elif action_type == 2:  # Buy joker
-            reward = self._buy_joker(action["shop_item_index"])
+            reward += self._buy_joker(action["shop_item_index"])
         elif action_type == 3:  # Buy pack
-            reward = self._buy_pack(action["shop_item_index"])
+            reward += self._buy_pack(action["shop_item_index"])
         elif action_type == 4:  # Buy card
-            reward = self._buy_card(action["shop_item_index"])
+            reward += self._buy_card(action["shop_item_index"])
         elif action_type == 5:  # Buy voucher
-            reward = self._buy_voucher(action["shop_item_index"])
+            reward += self._buy_voucher(action["shop_item_index"])
         elif action_type == 6:  # Sell joker
-            reward = self._sell_joker(action["joker_slot"])
+            reward += self._sell_joker(action["joker_slot"])
         elif action_type == 7:  # Use tarot
-            reward = self._use_tarot(action["consumable_slot"], card_selection, action["target_card_index"])
+            reward += self._use_tarot(action["consumable_slot"], card_selection, action["target_card_index"])
         elif action_type == 8:  # Use planet
-            reward = self._use_planet(action["consumable_slot"])
+            reward += self._use_planet(action["consumable_slot"])
         elif action_type == 9:  # Use spectral
-            reward = self._use_spectral(action["consumable_slot"], card_selection, action["target_card_index"])
+            reward += self._use_spectral(action["consumable_slot"], card_selection, action["target_card_index"])
         elif action_type == 10:  # Reroll shop
-            reward = self._reroll_shop()
+            reward += self._reroll_shop()
         elif action_type == 11:  # Skip/Continue
-            reward = self._skip_action()
+            reward += self._skip_action()
         
         # Check win/loss conditions
         if self.state.current_blind:
@@ -598,13 +602,13 @@ class BalatroEnv(gym.Env):
             self.state.hand.pop(idx)
         self._draw_cards(len(selected_indices))
         
-        # Reward is proportional to chips scored (increased to encourage play)
-        base_reward = np.log1p(total_score) / 5.0  # Doubled from /10.0
+        # Reward is proportional to chips scored (heavily increased to encourage play)
+        base_reward = np.log1p(total_score) / 2.0  # 5x more than original /10.0
         
         # Bonus for making progress toward blind goal
         if self.state.current_blind:
             progress = min(1.0, self.state.chips_scored / self.state.current_blind.chip_requirement)
-            progress_bonus = progress * 5.0  # Up to +5 reward for getting close
+            progress_bonus = progress * 10.0  # Up to +10 reward for getting close (doubled)
             return base_reward + progress_bonus
         
         return base_reward
@@ -729,8 +733,9 @@ class BalatroEnv(gym.Env):
     
     def _skip_action(self) -> float:
         """Skip current action"""
-        # Small penalty to discourage spam-skipping
-        return -0.1
+        # Larger penalty to strongly discourage spam-skipping
+        # This needs to be harsh enough that exploration is better
+        return -1.0
     
     def _reroll_shop(self) -> float:
         """Reroll shop items"""

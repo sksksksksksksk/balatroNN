@@ -9,6 +9,12 @@ Usage:
     # Evaluate with explicit config (recommended for clarity)
     python evaluate.py --checkpoint checkpoints/a100_aggressive/checkpoint_*.pt --config configs/a100_aggressive.yaml --episodes 100
     
+    # Verbose mode - see what actions the model takes
+    python evaluate.py --checkpoint checkpoints/final_model.pt --episodes 1 --verbose
+    
+    # Verbose mode with more steps shown
+    python evaluate.py --checkpoint checkpoints/final_model.pt --episodes 1 --verbose --max-steps-to-show 100
+    
     # Evaluate with rendering
     python evaluate.py --checkpoint checkpoints/final_model.pt --config configs/a100_aggressive.yaml --render
     
@@ -83,11 +89,87 @@ def parse_args():
         help="Random seed"
     )
     
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show detailed action logs during evaluation"
+    )
+    
+    parser.add_argument(
+        "--max-steps-to-show",
+        type=int,
+        default=50,
+        help="Maximum steps to show in verbose mode per episode (default: 50)"
+    )
+    
     return parser.parse_args()
 
 
+def format_action(action: dict, info: dict) -> str:
+    """Format action for human-readable output"""
+    action_type_names = [
+        "Play Hand",
+        "Discard",
+        "Buy Joker",
+        "Buy Pack",
+        "Buy Card",
+        "Buy Voucher",
+        "Sell Joker",
+        "Use Tarot",
+        "Use Planet",
+        "Use Spectral",
+        "Reroll Shop",
+        "Skip/Continue"
+    ]
+    
+    action_type = int(action["action_type"])
+    action_name = action_type_names[action_type] if action_type < len(action_type_names) else f"Unknown({action_type})"
+    
+    details = []
+    
+    # Add action-specific details
+    if action_type == 0:  # Play hand
+        selected = np.where(action["card_selection"] > 0.5)[0]
+        if len(selected) > 0:
+            details.append(f"cards={list(selected)}")
+    elif action_type == 1:  # Discard
+        selected = np.where(action["card_selection"] > 0.5)[0]
+        if len(selected) > 0:
+            details.append(f"cards={list(selected)}")
+    elif action_type in [2, 3, 4, 5]:  # Shop purchases
+        details.append(f"item={action.get('shop_item_index', '?')}")
+    elif action_type == 6:  # Sell joker
+        details.append(f"slot={action.get('joker_slot', '?')}")
+    elif action_type in [7, 9]:  # Tarot/Spectral
+        details.append(f"slot={action.get('consumable_slot', '?')}")
+        details.append(f"target={action.get('target_card_index', '?')}")
+    elif action_type == 8:  # Planet
+        details.append(f"slot={action.get('consumable_slot', '?')}")
+    
+    detail_str = ", ".join(details) if details else ""
+    return f"{action_name}" + (f" ({detail_str})" if detail_str else "")
+
+
+def format_game_state(info: dict) -> str:
+    """Format game state for display"""
+    parts = []
+    parts.append(f"Ante {info.get('ante', '?')}")
+    
+    chips = info.get('chips', 0)
+    parts.append(f"Chips: {chips:,}")
+    
+    money = info.get('money', 0)
+    parts.append(f"$: {money}")
+    
+    hands = info.get('hands_left', 0)
+    parts.append(f"Hands: {hands}")
+    
+    return " | ".join(parts)
+
+
 def evaluate(model, env, num_episodes: int, deterministic: bool = True, 
-             render: bool = False, device: str = "cuda"):
+             render: bool = False, device: str = "cuda", verbose: bool = False,
+             max_steps_to_show: int = 50):
     """
     Evaluate the model
     
@@ -98,6 +180,8 @@ def evaluate(model, env, num_episodes: int, deterministic: bool = True,
         deterministic: Use deterministic policy
         render: Render environment
         device: Device to use
+        verbose: Show detailed action logs
+        max_steps_to_show: Maximum steps to log in verbose mode
     
     Returns:
         Dictionary of evaluation metrics
@@ -108,12 +192,20 @@ def evaluate(model, env, num_episodes: int, deterministic: bool = True,
     episode_lengths = []
     episode_antes = []
     
-    for episode in tqdm(range(num_episodes), desc="Evaluating"):
-        obs, _ = env.reset()
+    for episode in tqdm(range(num_episodes), desc="Evaluating", disable=verbose):
+        obs, info = env.reset()
         done = False
         episode_reward = 0
         episode_length = 0
         max_ante = 1
+        step_rewards = []
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"📺 EPISODE {episode + 1}/{num_episodes}")
+            print(f"{'='*80}")
+            print(f"Starting state: {format_game_state(info)}")
+            print()
         
         while not done:
             # Convert observation to tensor
@@ -134,12 +226,23 @@ def evaluate(model, env, num_episodes: int, deterministic: bool = True,
                 else:
                     action_np[key] = val
             
+            # Verbose logging
+            if verbose and episode_length < max_steps_to_show:
+                action_str = format_action(action_np, info)
+                value_est = value.cpu().item() if torch.is_tensor(value) else value
+                print(f"Step {episode_length + 1:3d} | {action_str:<30} | V={value_est:7.2f}", end="")
+            
             # Step environment
             obs, reward, terminated, truncated, info = env.step(action_np)
             done = terminated or truncated
             
+            # More verbose logging
+            if verbose and episode_length < max_steps_to_show:
+                print(f" | R={reward:7.2f} | {format_game_state(info)}")
+            
             episode_reward += reward
             episode_length += 1
+            step_rewards.append(reward)
             
             # Track max ante reached
             if "ante" in info:
@@ -149,11 +252,27 @@ def evaluate(model, env, num_episodes: int, deterministic: bool = True,
             if render and episode == 0:  # Only render first episode
                 env.render()
         
+        # Episode summary
+        if verbose:
+            if episode_length >= max_steps_to_show:
+                print(f"\n... (showing first {max_steps_to_show} steps, episode ran {episode_length} total)")
+            print(f"\n{'─'*80}")
+            print(f"Episode ended: {'TIMEOUT' if truncated else 'TERMINATED'}")
+            print(f"Final state: {format_game_state(info)}")
+            print(f"Total Reward: {episode_reward:.2f}")
+            print(f"Total Steps: {episode_length}")
+            print(f"Max Ante: {max_ante}")
+            if len(step_rewards) > 0:
+                positive_rewards = sum(1 for r in step_rewards if r > 0)
+                negative_rewards = sum(1 for r in step_rewards if r < 0)
+                print(f"Reward breakdown: {positive_rewards} positive, {negative_rewards} negative, {len(step_rewards) - positive_rewards - negative_rewards} neutral")
+            print(f"{'='*80}\n")
+        
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_length)
         episode_antes.append(max_ante)
         
-        if render or episode < 3:  # Print first 3 episodes
+        if not verbose and (render or episode < 3):  # Print first 3 episodes if not verbose
             print(f"\nEpisode {episode + 1}: Reward = {episode_reward:.2f}, Length = {episode_length}, Max Ante = {max_ante}")
     
     # Compute statistics
@@ -255,7 +374,9 @@ def main():
         model, env, args.episodes, 
         deterministic=args.deterministic,
         render=args.render,
-        device=device
+        device=device,
+        verbose=args.verbose,
+        max_steps_to_show=args.max_steps_to_show
     )
     
     # Print results
