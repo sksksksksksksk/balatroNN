@@ -199,6 +199,7 @@ class GameState:
     ante: int = 1
     money: int = 4
     round_number: int = 1
+    consecutive_skips: int = 0  # Track consecutive skip actions for exponential penalty
     
     # Hand level information (upgrades from planet cards)
     hand_levels: Dict[HandType, Tuple[int, int]] = field(default_factory=lambda: {
@@ -480,6 +481,7 @@ class BalatroEnv(gym.Env):
             ante=1,
             money=4,
             round_number=1,
+            consecutive_skips=0,  # Start with no skip penalty
         )
         
         self.steps = 0
@@ -502,8 +504,9 @@ class BalatroEnv(gym.Env):
         action_type = action["action_type"]
         card_selection = action["card_selection"]
         
-        # Small exploration bonus for taking non-skip actions
+        # Reset consecutive skips counter for non-skip actions
         if action_type != 11:  # Not skip
+            self.state.consecutive_skips = 0
             reward += 0.1  # Encourage any action over skipping
         
         # Process action based on type (12 action types total)
@@ -732,10 +735,26 @@ class BalatroEnv(gym.Env):
         return 0.0
     
     def _skip_action(self) -> float:
-        """Skip current action"""
-        # Larger penalty to strongly discourage spam-skipping
-        # This needs to be harsh enough that exploration is better
-        return -1.0
+        """
+        Skip current action with exponentially increasing penalty
+        
+        The penalty doubles with each consecutive skip:
+        1st skip: -1.0
+        2nd skip: -2.0
+        3rd skip: -4.0
+        4th skip: -8.0
+        etc.
+        
+        This makes skip-spam exponentially painful.
+        """
+        # Calculate exponential penalty: -1.0 * 2^consecutive_skips
+        penalty = -1.0 * (2 ** self.state.consecutive_skips)
+        
+        # Increment counter for next time
+        self.state.consecutive_skips += 1
+        
+        # Cap penalty at -1024 to prevent overflow (10 consecutive skips)
+        return max(penalty, -1024.0)
     
     def _reroll_shop(self) -> float:
         """Reroll shop items"""
