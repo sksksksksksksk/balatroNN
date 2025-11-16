@@ -29,7 +29,7 @@ training:
   max_grad_norm: 0.8
   
   normalize_advantage: true
-  target_kl: 0.012
+  target_kl: 0.018
   device: "cuda"
   
   # A100-specific optimizations
