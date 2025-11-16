@@ -608,13 +608,50 @@ class BalatroEnv(gym.Env):
         # Reward is proportional to chips scored (heavily increased to encourage play)
         base_reward = np.log1p(total_score) / 2.0  # 5x more than original /10.0
         
+        # Hand type quality bonus - Incentivize playing better hands!
+        hand_type_bonuses = {
+            HandType.HIGH_CARD: 0.0,
+            HandType.PAIR: 0.5,
+            HandType.TWO_PAIR: 1.0,
+            HandType.THREE_OF_A_KIND: 1.5,
+            HandType.STRAIGHT: 2.5,
+            HandType.FLUSH: 3.0,
+            HandType.FULL_HOUSE: 3.5,
+            HandType.FOUR_OF_A_KIND: 4.5,
+            HandType.STRAIGHT_FLUSH: 6.0,
+            HandType.FLUSH_FIVE: 7.0,
+            HandType.FLUSH_HOUSE: 7.5,
+            HandType.FIVE_OF_A_KIND: 8.0,
+        }
+        hand_bonus = hand_type_bonuses.get(hand_type, 0.0)
+        
+        # Score threshold bonuses - Reward big plays!
+        score_bonus = 0.0
+        if total_score >= 10000:
+            score_bonus = 5.0
+        elif total_score >= 5000:
+            score_bonus = 3.0
+        elif total_score >= 2000:
+            score_bonus = 2.0
+        elif total_score >= 1000:
+            score_bonus = 1.0
+        elif total_score >= 500:
+            score_bonus = 0.5
+        
         # Bonus for making progress toward blind goal
+        progress_bonus = 0.0
         if self.state.current_blind:
             progress = min(1.0, self.state.chips_scored / self.state.current_blind.chip_requirement)
-            progress_bonus = progress * 10.0  # Up to +10 reward for getting close (doubled)
-            return base_reward + progress_bonus
+            progress_bonus = progress * 10.0  # Up to +10 reward for getting close
+            
+            # Extra bonus for one-shot kills (beating blind in fewer hands)
+            if progress >= 1.0:
+                hands_used = 4 - self.state.hands_remaining  # How many hands we used
+                efficiency_bonus = max(0, (4 - hands_used) * 2.0)  # Reward using fewer hands
+                progress_bonus += efficiency_bonus
         
-        return base_reward
+        total_reward = base_reward + hand_bonus + score_bonus + progress_bonus
+        return total_reward
     
     def _discard_cards(self, card_selection: np.ndarray) -> float:
         """Discard selected cards and draw new ones"""
