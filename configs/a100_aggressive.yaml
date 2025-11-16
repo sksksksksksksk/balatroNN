@@ -1,21 +1,22 @@
-# A100 GPU AGGRESSIVE configuration
-# Designed to maximize A100 40GB utilization
-# Uses 32-36GB VRAM for maximum training speed (updated batch size)
+# A100 GPU FAST ITERATION configuration
+# Optimized for rapid experimentation with new reward structure
+# 384d/8layer model with massive batch_size=10240 for quick convergence
+# Expected VRAM: ~30-34GB, Training time: ~6-8 hours for 20M steps
 
 environment:
   max_steps: 1500
   starting_deck_size: 52
 
 model:
-  d_model: 512  # Much larger - use that A100 power!
-  num_heads: 16
-  num_layers: 10  # Deep network for complex strategies
+  d_model: 384  # Fast iteration size - good balance of speed and capacity
+  num_heads: 12
+  num_layers: 8  # Efficient depth for quick training
   dropout: 0.1
 
 training:
   total_timesteps: 20_000_000
   learning_rate: 0.0002
-  batch_size: 7680  # Increased from 3072 - using more A100 VRAM (25→32GB target)
+  batch_size: 10240  # Maximum stable batch size for fast convergence
   n_epochs: 10
   n_steps: 4096  # Large rollout buffer
   

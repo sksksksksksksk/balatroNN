@@ -1,0 +1,19 @@
+============================================================
+EVALUATION RESULTS
+============================================================
+Checkpoint: checkpoint_1228800(1).pt
+Episodes: 1
+Policy: Deterministic
+
+mean_reward: -209.9999999999995
+std_reward: 0.0
+min_reward: -209.9999999999995
+max_reward: -209.9999999999995
+mean_length: 1000.0
+std_length: 0.0
+mean_ante: 1.0
+max_ante: 1
+win_rate: 0.0
+
+Per-episode results:
+Episode 1: Reward=-210.00, Length=1000, Ante=1
