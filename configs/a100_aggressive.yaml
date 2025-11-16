@@ -9,13 +9,13 @@ environment:
 model:
   d_model: 512  # Much larger - use that A100 power!
   num_heads: 16
-  num_layers: 12  # Deep network for complex strategies
+  num_layers: 10  # Deep network for complex strategies
   dropout: 0.1
 
 training:
-  total_timesteps: 50_000_000
+  total_timesteps: 20_000_000
   learning_rate: 0.0002
-  batch_size: 4096  # Increased from 3072 - using more A100 VRAM (25→32GB target)
+  batch_size: 7680  # Increased from 3072 - using more A100 VRAM (25→32GB target)
   n_epochs: 10
   n_steps: 4096  # Large rollout buffer
   
