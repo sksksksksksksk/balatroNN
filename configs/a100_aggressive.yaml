@@ -16,9 +16,9 @@ model:
 training:
   total_timesteps: 20_000_000
   learning_rate: 0.0002
-  batch_size: 20480  # MASSIVE batch for maximum A100 utilization (target ~35GB VRAM)
+  batch_size: 8192  # Mini-batch size for training
   n_epochs: 10
-  n_steps: 4096  # Large rollout buffer
+  n_steps: 16384  # HUGE rollout buffer - this controls actual VRAM usage!
   
   gamma: 0.995
   gae_lambda: 0.95
