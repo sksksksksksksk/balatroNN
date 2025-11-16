@@ -1,7 +1,7 @@
-# A100 GPU FAST ITERATION configuration
-# Optimized for rapid experimentation with new reward structure
-# 384d/8layer model with massive batch_size=10240 for quick convergence
-# Expected VRAM: ~30-34GB, Training time: ~6-8 hours for 20M steps
+# A100 GPU FULL TRAINING configuration
+# Optimized for complete curriculum learning with 50M timesteps
+# 384d/8layer model with large batch sizes for stable convergence
+# Expected VRAM: ~30-34GB, Training time: ~15-20 hours for 50M steps
 
 environment:
   max_steps: 1500
@@ -14,7 +14,7 @@ model:
   dropout: 0.1
 
 training:
-  total_timesteps: 20_000_000
+  total_timesteps: 50_000_000
   learning_rate: 0.0002
   batch_size: 8192  # Mini-batch size for training
   n_epochs: 4  # Reduced for faster training - prevents overfitting
