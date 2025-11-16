@@ -7,7 +7,7 @@ environment:
   starting_deck_size: 52
 
 model:
-  d_model: 768  # Much larger - use that A100 power!
+  d_model: 512  # Much larger - use that A100 power!
   num_heads: 16
   num_layers: 12  # Deep network for complex strategies
   dropout: 0.1
