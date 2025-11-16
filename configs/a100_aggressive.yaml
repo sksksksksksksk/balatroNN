@@ -1,6 +1,6 @@
 # A100 GPU AGGRESSIVE configuration
 # Designed to maximize A100 40GB utilization
-# Uses 30-35GB VRAM for maximum training speed
+# Uses 32-36GB VRAM for maximum training speed (updated batch size)
 
 environment:
   max_steps: 1500
@@ -15,7 +15,7 @@ model:
 training:
   total_timesteps: 50_000_000
   learning_rate: 0.0002
-  batch_size: 3072  # MASSIVE batch size - A100 can handle it!
+  batch_size: 4096  # Increased from 3072 - using more A100 VRAM (25→32GB target)
   n_epochs: 10
   n_steps: 4096  # Large rollout buffer
   
