@@ -1,7 +1,7 @@
 # A100 GPU FULL TRAINING configuration
 # Optimized for complete curriculum learning with 50M timesteps
-# 384d/8layer model with optimized rollout size for speed
-# Expected VRAM: ~8-12GB, Training time: ~12-16 hours for 50M steps
+# 384d/8layer model with large batches for maximum GPU utilization
+# Expected VRAM: ~18-24GB, Training time: ~10-14 hours for 50M steps
 
 environment:
   max_steps: 1500
@@ -16,9 +16,9 @@ model:
 training:
   total_timesteps: 50_000_000
   learning_rate: 0.0002
-  batch_size: 2048  # Mini-batch size for training
-  n_epochs: 4  # Reduced for faster training - prevents overfitting
-  n_steps: 2048  # Optimal rollout buffer - balance speed and stability
+  batch_size: 4096  # Large batch for maximum A100 GPU utilization!
+  n_epochs: 4  # 4 epochs = 4 gradient updates per rollout
+  n_steps: 4096  # Larger buffer to enable big batches (still fast enough)
   
   gamma: 0.995
   gae_lambda: 0.95
@@ -38,8 +38,8 @@ training:
 
 logging:
   log_dir: "logs/a100_aggressive"
-  log_interval: 5  # More frequent logging for better monitoring
-  save_interval: 100  # Save checkpoints every ~200k steps (~3-5 minutes)
+  log_interval: 10  # Log every ~40k steps
+  save_interval: 50  # Save checkpoints every ~200k steps (~3-5 minutes)
   use_tensorboard: true
 
 checkpoints:
