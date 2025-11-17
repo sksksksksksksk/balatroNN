@@ -38,14 +38,14 @@ training:
 
 logging:
   log_dir: "logs/a100_aggressive"
-  log_interval: 10
-  save_interval: 100
+  log_interval: 2  # More frequent logging for better monitoring
+  save_interval: 20  # Save checkpoints every ~400k steps (~5-7 minutes)
   use_tensorboard: true
 
 checkpoints:
   dir: "checkpoints/a100_aggressive"
   save_best: true
-  keep_last_n: 5
+  keep_last_n: 10  # Keep more checkpoints due to frequent saving
   save_optimizer: true
 
 evaluation:

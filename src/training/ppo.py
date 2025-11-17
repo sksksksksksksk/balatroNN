@@ -424,6 +424,23 @@ class PPOTrainer:
         
         start_time = time.time()
         
+        # Print training configuration
+        print("\n" + "="*80)
+        print("🚀 STARTING TRAINING")
+        print("="*80)
+        print(f"📊 Configuration:")
+        print(f"   Total Timesteps: {total_timesteps:,}")
+        print(f"   Rollout Steps: {self.config.n_steps:,}")
+        print(f"   Batch Size: {self.config.batch_size:,}")
+        print(f"   Epochs per Update: {self.config.n_epochs}")
+        print(f"   Learning Rate: {self.config.learning_rate:.6f}")
+        print(f"   Target KL: {self.config.target_kl}")
+        print(f"   Device: {self.config.device}")
+        print(f"\n📈 Logging:")
+        print(f"   Log Interval: Every {log_interval} updates")
+        print(f"   Save Interval: Every {save_interval} updates (~{save_interval * self.config.n_steps:,} steps)")
+        print(f"   Checkpoint Dir: {checkpoint_dir}")
+        
         # Initialize curriculum if enabled
         if self.curriculum:
             phase = self.curriculum.get_phase_for_step(self.num_timesteps)
@@ -489,15 +506,62 @@ class PPOTrainer:
             
             # Logging
             if self.num_updates % log_interval == 0:
-                print(f"\n===== Update {self.num_updates} | Timesteps {self.num_timesteps} =====")
-                for key, value in stats.items():
-                    print(f"{key}: {value:.4f}")
+                # Calculate progress
+                progress_pct = (self.num_timesteps / total_timesteps) * 100
+                elapsed_time = time.time() - start_time
+                steps_per_sec = self.num_timesteps / elapsed_time if elapsed_time > 0 else 0
+                remaining_steps = total_timesteps - self.num_timesteps
+                eta_seconds = remaining_steps / steps_per_sec if steps_per_sec > 0 else 0
+                eta_hours = eta_seconds / 3600
+                
+                print("\n" + "="*80)
+                print(f"📊 UPDATE {self.num_updates} | Timesteps: {self.num_timesteps:,} / {total_timesteps:,} ({progress_pct:.2f}%)")
+                print(f"⏱️  Time Elapsed: {elapsed_time/3600:.2f}h | ETA: {eta_hours:.2f}h | Speed: {steps_per_sec:.1f} steps/s")
+                
+                # Curriculum info
+                if self.curriculum:
+                    phase = self.curriculum.get_current_phase()
+                    print(f"🎓 Curriculum: Phase {self.curriculum.current_phase_idx + 1}/7 - {phase.name}")
+                    print(f"   Enabled Tiers: {phase.enabled_tiers if phase.enabled_tiers else 'None'} | Joker Slots: {phase.max_joker_slots}")
+                
+                print("-"*80)
+                # Rollout stats
+                print(f"🎮 Rollout Stats:")
+                print(f"   Mean Reward: {rollout_stats.get('rollout/mean_reward', 0):.4f}")
+                print(f"   Mean Length: {rollout_stats.get('rollout/mean_length', 0):.2f}")
+                if "rollout/mean_score" in rollout_stats:
+                    print(f"   Mean Score: {rollout_stats.get('rollout/mean_score', 0):.2f}")
+                
+                # Training stats
+                print(f"📈 Training Stats:")
+                print(f"   Policy Loss: {train_stats.get('train/policy_loss', 0):.6f}")
+                print(f"   Value Loss: {train_stats.get('train/value_loss', 0):.6f}")
+                print(f"   Entropy: {train_stats.get('train/entropy', 0):.6f}")
+                if "train/kl_divergence" in train_stats:
+                    print(f"   KL Divergence: {train_stats.get('train/kl_divergence', 0):.6f}")
+                if "train/clip_fraction" in train_stats:
+                    print(f"   Clip Fraction: {train_stats.get('train/clip_fraction', 0):.4f}")
+                
+                # Current learning rate
+                current_lr = self.optimizer.param_groups[0]['lr']
+                print(f"⚙️  Learning Rate: {current_lr:.6f}")
+                print("="*80)
             
             # Save checkpoint
             if self.num_updates % save_interval == 0:
                 checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_{self.num_timesteps}.pt")
                 self.save_checkpoint(checkpoint_path)
-                print(f"Saved checkpoint to {checkpoint_path}")
+                
+                # Get file size
+                import os as os_module
+                file_size_mb = os_module.path.getsize(checkpoint_path) / (1024 * 1024)
+                progress_pct = (self.num_timesteps / total_timesteps) * 100
+                
+                print(f"\n💾 CHECKPOINT SAVED!")
+                print(f"   📁 Path: {checkpoint_path}")
+                print(f"   💿 Size: {file_size_mb:.2f} MB")
+                print(f"   📊 Progress: {self.num_timesteps:,} / {total_timesteps:,} steps ({progress_pct:.2f}%)")
+                print(f"   🔢 Update: {self.num_updates}")
             
             # Update history
             history["timesteps"].append(self.num_timesteps)
